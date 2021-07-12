@@ -221,7 +221,11 @@ class ModelPlain(ModelBase):
     def test(self):
         self.netG.eval()
         with torch.no_grad():
-            self.netG_forward()
+            if self.amp:
+                with torch.cuda.amp.autocast():
+                    self.netG_forward()
+            else:
+                self.netG_forward()
         self.netG.train()
 
     # ----------------------------------------
