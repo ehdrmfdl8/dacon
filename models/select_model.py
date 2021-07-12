@@ -6,7 +6,7 @@
 """
 
 
-def define_Model(opt):
+def define_Model(opt, scaler):
     model = opt['model']      # one input: L
 
     if model == 'plain':
@@ -24,7 +24,7 @@ def define_Model(opt):
     else:
         raise NotImplementedError('Model [{:s}] is not defined.'.format(model))
 
-    m = M(opt)
+    m = M(opt, scaler)
 
     print('Training model [{:s}] is created.'.format(m.__class__.__name__))
     return m

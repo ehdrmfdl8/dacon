@@ -15,13 +15,14 @@ from utils.utils_regularizers import regularizer_orth, regularizer_clip
 
 class ModelPlain(ModelBase):
     """Train with pixel loss"""
-    def __init__(self, opt):
-        super(ModelPlain, self).__init__(opt)
+    def __init__(self, opt, scaler):
+        super(ModelPlain, self).__init__(opt, scaler)
         # ------------------------------------
         # define network
         # ------------------------------------
         self.netG = define_G(opt)
         self.netG = self.model_to_device(self.netG)
+
 
     """
     # ----------------------------------------
@@ -157,19 +158,37 @@ class ModelPlain(ModelBase):
     # ----------------------------------------
     def optimize_parameters(self, current_step):
         self.G_optimizer.zero_grad()
-        self.netG_forward()
+        if self.amp:
+            with torch.cuda.amp.autocast():
+                self.netG_forward()
 
-        loss_G_total = 0
+                loss_G_total = 0
 
-        if self.opt_train['G_lossfn_weight'] > 0:
-            G_loss = self.G_lossfn_weight * self.G_lossfn(self.E, self.H)
-            loss_G_total += G_loss                  # 1) pixel loss
+                if self.opt_train['G_lossfn_weight'] > 0:
+                    G_loss = self.G_lossfn_weight * self.G_lossfn(self.E, self.H)
+                    loss_G_total += G_loss  # 1) pixel loss
 
-        if self.opt_train['F_lossfn_weight'] > 0:
-            F_loss = self.F_lossfn_weight * self.F_lossfn(self.E, self.H)
-            loss_G_total += F_loss                  # 2) VGG feature loss
-        loss_G_total.backward()
+                if self.opt_train['F_lossfn_weight'] > 0:
+                    F_loss = self.F_lossfn_weight * self.F_lossfn(self.E, self.H)
+                    loss_G_total += F_loss  # 2) VGG feature loss
+            self.scaler.scale(loss_G_total).backward()
+            self.scaler.step(self.G_optimizer)
+            self.scaler.update()
+        else:
+            self.netG_forward()
 
+            loss_G_total = 0
+
+            if self.opt_train['G_lossfn_weight'] > 0:
+                G_loss = self.G_lossfn_weight * self.G_lossfn(self.E, self.H)
+                loss_G_total += G_loss  # 1) pixel loss
+
+            if self.opt_train['F_lossfn_weight'] > 0:
+                F_loss = self.F_lossfn_weight * self.F_lossfn(self.E, self.H)
+                loss_G_total += F_loss  # 2) VGG feature loss
+
+            loss_G_total.backward()
+            self.G_optimizer.step()
         # ------------------------------------
         # clip_grad
         # ------------------------------------

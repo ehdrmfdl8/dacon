@@ -6,12 +6,14 @@ from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 
 class ModelBase():
-    def __init__(self, opt):
+    def __init__(self, opt, scaler):
         self.opt = opt                         # opt
         self.save_dir = opt['path']['models']  # save models
         self.device = torch.device('cuda' if opt['gpu_ids'] is not None else 'cpu')
         self.is_train = opt['is_train']        # training or not
         self.schedulers = []                   # schedulers
+        self.scaler = scaler            # Mixed precision
+        self.amp = opt['amp']
 
     """
     # ----------------------------------------

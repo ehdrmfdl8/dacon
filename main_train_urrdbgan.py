@@ -31,9 +31,13 @@ def main(json_path='options/train_urrdb_gan.json'):
     parser.add_argument('--launcher', default='pytorch', help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--dist', default=False)
-
+    parser.add_argument('--amp', default=True)
     opt = option.parse(parser.parse_args().opt, is_train=True)
     opt['dist'] = parser.parse_args().dist
+    opt['amp'] = parser.parse_args().amp
+
+    # FP32 -> FP16
+    scaler = torch.cuda.amp.GradScaler()
 
     # ----------------------------------------
     # distributed settings
@@ -144,7 +148,7 @@ def main(json_path='options/train_urrdb_gan.json'):
     # ----------------------------------------
     '''
 
-    model = define_Model(opt)
+    model = define_Model(opt, scaler)
 
     model.init_train()
     if opt['rank'] == 0:
