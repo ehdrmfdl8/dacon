@@ -1,5 +1,5 @@
 {
-  "task": "urrdb_F16" //
+  "task": "urrdbx2_test" //
   , "model": "plain" // "plain" | "gan"
   , "gpu_ids": [0]
   , "scale": 1
@@ -20,7 +20,7 @@
       , "use_rot": true
       , "dataloader_shuffle": true
       , "dataloader_num_workers": 8
-      , "dataloader_batch_size": 8
+      , "dataloader_batch_size": 2
     }
     , "test": {
       "name": "test_dataset"
@@ -31,22 +31,22 @@
   }
 
   , "path": {
-    "root": "urrdb_psnr"
+    "root": "urrdb_psnrx2"
     , "pretrained_netG": null
   }
 
   , "netG": {
-    "net_type": "urrdb" // "srresnet" | "rrdbnet" | "rcan" | "unet" | "unetplus" | "nonlocalunet"
+    "net_type": "urrdbx2" // "srresnet" | "rrdbnet" | "rcan" | "unet" | "unetplus" | "nonlocalunet"
     , "in_nc": 3
     , "out_nc": 3
     , "nc": 32 // [64, 128, 256, 512] for "unet"
     , "nb": 20
     , "gc": 32
-    , "act_mode": "R" // "BR" for BN+ReLU | "R" for ReLU
+    , "act_mode": "L" // "BR" for BN+ReLU | "R" for ReLU
     , "upsample_mode": "convtranspose" // "pixelshuffle" | "convtranspose" | "upconv"
     , "downsample_mode": "strideconv" // "strideconv" | "avgpool" | "maxpool"
 
-    , "init_type": "kaiming_normal" // "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
+    , "init_type": "orthogonal" // "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
     , "init_bn_type": "uniform" // "uniform" | "constant"
     , "init_gain": 0.2
   }
@@ -70,8 +70,8 @@
     , "G_regularizer_orthstep": null
     , "G_regularizer_clipstep": null
 
-    , "checkpoint_test": 5000
-    , "checkpoint_save": 5000
+    , "checkpoint_test": 1
+    , "checkpoint_save": 1
     , "checkpoint_print": 1
   }
 }

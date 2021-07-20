@@ -1,5 +1,5 @@
 {
-  "task": "urrdb_F16" //
+  "task": "urrdbx4_F16" //
   , "model": "plain" // "plain" | "gan"
   , "gpu_ids": [0]
   , "scale": 1
@@ -15,12 +15,12 @@
       , "dataset_type": "plain"
       , "dataroot_H": "trainsets/train_label_img/case3/train"
       , "dataroot_L": "trainsets/train_input_img/case3/train"
-      , "H_size": 512 // 128 | 192
+      , "H_size": 1024 // 128 | 192
       , "use_flip": true
       , "use_rot": true
       , "dataloader_shuffle": true
       , "dataloader_num_workers": 8
-      , "dataloader_batch_size": 8
+      , "dataloader_batch_size": 4
     }
     , "test": {
       "name": "test_dataset"
@@ -31,22 +31,22 @@
   }
 
   , "path": {
-    "root": "urrdb_psnr"
+    "root": "urrdb_psnrx4"
     , "pretrained_netG": null
   }
 
   , "netG": {
-    "net_type": "urrdb" // "srresnet" | "rrdbnet" | "rcan" | "unet" | "unetplus" | "nonlocalunet"
+    "net_type": "urrdbx4" // "srresnet" | "rrdbnet" | "rcan" | "unet" | "unetplus" | "nonlocalunet"
     , "in_nc": 3
     , "out_nc": 3
     , "nc": 32 // [64, 128, 256, 512] for "unet"
     , "nb": 20
     , "gc": 32
-    , "act_mode": "R" // "BR" for BN+ReLU | "R" for ReLU
+    , "act_mode": "L" // "BR" for BN+ReLU | "R" for ReLU
     , "upsample_mode": "convtranspose" // "pixelshuffle" | "convtranspose" | "upconv"
     , "downsample_mode": "strideconv" // "strideconv" | "avgpool" | "maxpool"
 
-    , "init_type": "kaiming_normal" // "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
+    , "init_type": "orthogonal" // "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
     , "init_bn_type": "uniform" // "uniform" | "constant"
     , "init_gain": 0.2
   }
@@ -61,7 +61,7 @@
     , "G_optimizer_type": "adam"
     , "G_optimizer_lr": 2e-4
     , "G_optimizer_wd": 0
-    , "G_optimizer_clipgrad": null
+    , "G_optimizer_clipgrad": 1
 
     , "G_scheduler_type": "MultiStepLR"
     , "G_scheduler_milestones": [200000, 400000, 600000, 800000, 1000000]
@@ -72,6 +72,6 @@
 
     , "checkpoint_test": 5000
     , "checkpoint_save": 5000
-    , "checkpoint_print": 1
+    , "checkpoint_print": 10
   }
 }

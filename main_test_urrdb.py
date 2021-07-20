@@ -17,7 +17,7 @@ def main():
     # Preparation
     # ----------------------------------------
 
-    model_name = '335000_G'        # 'rrdb_x4_esrgan' | 'rrdb_x4_psnr'
+    model_name = '330000_G'        # 'rrdb_x4_esrgan' | 'rrdb_x4_psnr'
     testset_name = 'test_input_img'                # test set,  'set5' | 'srbsd68'
     need_degradation = False              # default: True
     x8 = False                           # default: False, x8 to boost performance
@@ -61,7 +61,7 @@ def main():
     # load model
     # ----------------------------------------
 
-    from models.network_u_rrdb import URRDBNet as net
+    from models.network_u_rrdbx2 import URRDBNetx2 as net
     model = net(in_nc=n_channels, out_nc=n_channels, nc=32, nb=20, gc=32, act_mode='L', upsample_mode='convtranspose', downsample_mode='strideconv')
     model.load_state_dict(torch.load(model_path), strict=True)  # strict=False
     model.eval()

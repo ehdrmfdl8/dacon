@@ -32,7 +32,7 @@
 
   , "path": {
     "root": "urrdb_gan"
-    , "pretrained_netG": null  // path of pretrained model
+    , "pretrained_netG": "model_zoo/400000_G.pth"  // path of pretrained model
     , "pretrained_netD": null  // path of pretrained model
   }
 
@@ -94,8 +94,8 @@
     , "D_scheduler_gamma": 1
     , "D_optimizer_reuse": true
 
-    , "checkpoint_test": 5000
+    , "checkpoint_test": 1
     , "checkpoint_save": 5000
-    , "checkpoint_print": 200
+    , "checkpoint_print": 1
   }
 }

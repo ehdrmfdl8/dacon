@@ -45,7 +45,7 @@ class ResidualDenseBlock_5C(nn.Module):
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
 
         # initialization
-        #initialize_weights([self.conv1, self.conv2, self.conv3, self.conv4, self.conv5], 0.1)
+        initialize_weights([self.conv1, self.conv2, self.conv3, self.conv4, self.conv5], 0.1)
 
     def forward(self, x):
         x1 = self.lrelu(self.conv1(x))
@@ -72,9 +72,9 @@ class RRDB(nn.Module):
         return out * 0.2 + x
 
 
-class URRDBNet(nn.Module):
+class URRDBNetx4(nn.Module):
     def __init__(self, in_nc=3, out_nc=3, nc=32, nb=20, gc=32, act_mode='L', downsample_mode='strideconv', upsample_mode='convtranspose'):
-        super(URRDBNet, self).__init__()
+        super(URRDBNetx4, self).__init__()
         RRDB_block_f = functools.partial(RRDB, nf=2*nc, gc=gc)
         print([in_nc, out_nc, nc, nb, gc])
 
@@ -117,14 +117,14 @@ class URRDBNet(nn.Module):
 
         # Decoder
         self.m_up21 = upsample_block(4*nc, 2*nc, bias=True, mode='2') # 128 -> 64
-        self.m_up22 = B.ResBlock(2*nc, 2*nc, bias=True, mode='C' + act_mode + 'C')
-        self.m_up23 = B.ResBlock(2*nc, 2*nc, bias=True, mode='C' + act_mode + 'C')
+        self.m_up22 = B.ResBlock(2*nc, 2*nc, bias=True, mode='C'+act_mode+'C')
+        self.m_up23 = B.ResBlock(2*nc, 2*nc, bias=True, mode='C'+act_mode+'C')
 
         self.m_up11 = upsample_block(2*nc, nc, bias=True, mode='2') # 64 -> 32
-        self.m_up12 = B.ResBlock(nc, nc, bias=True, mode='C' + act_mode + 'C')
+        self.m_up12 = B.ResBlock(nc, nc, bias=True, mode='C'+act_mode+'C')
         self.m_up13 = B.ResBlock(nc, nc, bias=True, mode='C' + act_mode + 'C')
 
-        self.conv_last = nn.Conv2d(nc, out_nc, 3, 1, 1, bias=True)
+
 
         # RRDBNet
 
@@ -134,7 +134,7 @@ class URRDBNet(nn.Module):
 
         self.kernel_block1 = B.sequential(
             nn.Conv2d(2 * nc, 4 * nc, 1, 1, bias=True),
-            B.ResBlock(4 * nc, 4 * nc, bias=True, mode='C' + act_mode + 'C'),
+            B.ResBlock(4 * nc, 4 * nc, bias=True, mode='C'+act_mode+'C'),
             B.ResBlock(4 * nc, 4 * nc, bias=True, mode='C' + act_mode + 'C'))
 
         self.kernel_block2 = B.sequential(
@@ -150,15 +150,20 @@ class URRDBNet(nn.Module):
         self.upconv1 = nn.Conv2d(2*nc, 2*nc, 3, 1, 1, bias=True)
         self.upconv2 = nn.Conv2d(2*nc, 2*nc, 3, 1, 1, bias=True)
         self.lrelu = nn.LeakyReLU(negative_slope=0.2, inplace=True)
-        self.HRconv = nn.Conv2d(nc, nc, 3, 1, 1, bias=True)
+
+        self.H_conv0 = nn.Conv2d(nc, nc, 3, 1, 1, bias=True)
+        self.m_uper1 = upsample_block(nc, nc, mode = '2' + act_mode)
+        self.m_uper2 = upsample_block(nc, nc, mode='2' + act_mode)
+        self.H_conv1 = B.conv(nc, nc, mode='C'+act_mode)
         self.conv_last = nn.Conv2d(nc, out_nc, 3, 1, 1, bias=True)
 
     def forward(self, x):
         w, h = x.size()[-2:]
-        paddingBottom = int(np.ceil(h/4)*4-h)
-        paddingRight = int(np.ceil(w/4)*4-w)
+        paddingBottom = int(np.ceil(h/16)*16-h)
+        paddingRight = int(np.ceil(w/16)*16-w)
         x = nn.ReplicationPad2d((0, paddingBottom, 0, paddingRight))(x)
 
+        x = F.interpolate(x, scale_factor=0.25, mode='bicubic')
         head = self.m_down11(x) # [1 32 256 256]
         E1 = self.m_down13(self.m_down12(head)) # [1 32 256 256]
         E2 = self.m_down23(self.m_down22(self.m_down21(E1))) # [1 64 128 128]
@@ -174,13 +179,14 @@ class URRDBNet(nn.Module):
         D = self.kernel_block1(k1) + E3 # [1 128 64 64]
         D = self.m_up23(self.m_up22(self.m_up21(D)+ self.kernel_block2(k2) + E2)) # [1 64 128 128]
         D = self.m_up13(self.m_up12(self.m_up11(D)+ self.kernel_block3(k3) + E1)) # [1 32 256 256]
-        out = self.conv_last(self.HRconv(D) + head)# [1 3 256 256]
+        out = self.conv_last(self.H_conv1(self.m_uper2(self.m_uper1(self.H_conv0(D) + head))))
 
+        out = out[..., :w, :h]
         return out
 
 if __name__ == '__main__':
-    x = torch.rand(1,3,256,256)
-    net = URRDBNet()
+    x = torch.rand(1,3,2448,3264)
+    net = URRDBNetx4()
     net.eval()
     with torch.no_grad():
         y = net(x)

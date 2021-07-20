@@ -1,8 +1,9 @@
 from collections import OrderedDict
 import torch
 import torch.nn as nn
+import torch.nn.utils as torch_utils
 from torch.optim import lr_scheduler
-from torch.optim import Adam
+from torch.optim import Adam, SGD, RMSprop
 
 from models.select_network import define_G
 from models.model_base import ModelBase
@@ -116,14 +117,13 @@ class ModelPlain(ModelBase):
     # define optimizer
     # ----------------------------------------
     def define_optimizer(self):
-        G_optim_params = []
+        G_optim_params = [] # optimizer parameter groups
         for k, v in self.netG.named_parameters():
             if v.requires_grad:
                 G_optim_params.append(v)
-            else:
-                print('Params [{:s}] will not optimize.'.format(k))
         self.G_optimizer = Adam(G_optim_params, lr=self.opt_train['G_optimizer_lr'], weight_decay=0)
-
+        torch_utils.clip_grad_norm_(self.netG.parameters(), max_norm=1)
+        del G_optim_params
     # ----------------------------------------
     # define scheduler, only "MultiStepLR"
     # ----------------------------------------
@@ -132,6 +132,13 @@ class ModelPlain(ModelBase):
                                                         self.opt_train['G_scheduler_milestones'],
                                                         self.opt_train['G_scheduler_gamma']
                                                         ))
+        # self.schedulers.append(lr_scheduler.CyclicLR(self.G_optimizer,
+        #                       base_lr=1e-5,
+        #                       max_lr=2e-4,
+        #                       step_size_up=5,
+        #                       step_size_down=100,
+        #                       mode='exp_range',
+        #                       gamma=0.9995))
     """
     # ----------------------------------------
     # Optimization during training with data
@@ -195,9 +202,7 @@ class ModelPlain(ModelBase):
         # `clip_grad_norm` helps prevent the exploding gradient problem.
         G_optimizer_clipgrad = self.opt_train['G_optimizer_clipgrad'] if self.opt_train['G_optimizer_clipgrad'] else 0
         if G_optimizer_clipgrad > 0:
-            torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=self.opt_train['G_optimizer_clipgrad'], norm_type=2)
-
-        self.G_optimizer.step()
+            torch.nn.utils.clip_grad_norm_(self.netG.parameters(), max_norm=self.opt_train['G_optimizer_clipgrad'], norm_type=2)
 
         # ------------------------------------
         # regularizer

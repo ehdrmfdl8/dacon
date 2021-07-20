@@ -17,9 +17,10 @@ from utils.utils_dist import get_dist_info, init_dist
 
 from data.select_dataset import define_Dataset
 from models.select_model import define_Model
+from torch.utils.tensorboard import SummaryWriter
 
-
-def main(json_path='options/train_urrdb_psnr.json'):
+# options/train_urrdb_psnr.json
+def main(json_path='options/train_urrdb_psnr_X2.json'):
     '''
     # ----------------------------------------
     # Step--1 (prepare opt)
@@ -36,6 +37,7 @@ def main(json_path='options/train_urrdb_psnr.json'):
     opt['dist'] = parser.parse_args().dist
     opt['amp'] = parser.parse_args().amp
 
+    tb_writer = SummaryWriter(opt['path']['task'])
     # FP32 -> FP16
     scaler = torch.cuda.amp.GradScaler()
 
@@ -84,7 +86,7 @@ def main(json_path='options/train_urrdb_psnr.json'):
         utils_logger.logger_info(logger_name, os.path.join(opt['path']['log'], logger_name + '.log'))
         logger = logging.getLogger(logger_name)
         logger.info(option.dict2str(opt))
-
+        logger.info(f"Tensorboard Start with 'tensorboard --logdir {opt['path']['task']}', view at http://localhost:6006/")
     # ----------------------------------------
     # seed
     # ----------------------------------------
@@ -149,8 +151,9 @@ def main(json_path='options/train_urrdb_psnr.json'):
 
     model.init_train()
     if opt['rank'] == 0:
-        logger.info(model.info_network())
-        logger.info(model.info_params())
+        # logger.info(model.info_network())
+        # logger.info(model.info_params())
+        pass
 
     '''
     # ----------------------------------------
@@ -158,6 +161,7 @@ def main(json_path='options/train_urrdb_psnr.json'):
     # ----------------------------------------
     '''
 
+    best_psnr = [0.0]
     for epoch in range(1000000):  # keep running
         for i, train_data in enumerate(train_loader):
 
@@ -191,14 +195,7 @@ def main(json_path='options/train_urrdb_psnr.json'):
                 logger.info(message)
 
             # -------------------------------
-            # 5) save model
-            # -------------------------------
-            if current_step % opt['train']['checkpoint_save'] == 0 and opt['rank'] == 0:
-                logger.info('Saving the model.')
-                model.save(current_step)
-
-            # -------------------------------
-            # 6) testing
+            # 5) testing
             # -------------------------------
             if current_step % opt['train']['checkpoint_test'] == 0 and opt['rank'] == 0:
 
@@ -236,10 +233,33 @@ def main(json_path='options/train_urrdb_psnr.json'):
                     avg_psnr += current_psnr
 
                 avg_psnr = avg_psnr / idx
-
+                if avg_psnr >= best_psnr[-1]:
+                    best_psnr.append(avg_psnr)
+                    best_psnr.sort(reverse=True)
+                    # print(best_psnr)
+                    if len(best_psnr) >= 21:
+                        best_psnr.pop()
+                # write tensorboard
+                tags = ['train/G_loss', 'train/F_loss', 'PSNR', 'lr']
+                for x, tag in zip(list(logs.values()) + [avg_psnr + model.current_learning_rate()], tags):
+                    tb_writer.add_scalar(tag, x, current_step)
                 # testing log
                 logger.info(
                     '<epoch:{:3d}, iter:{:8,d}, Average PSNR : {:<.2f}dB\n'.format(epoch, current_step, avg_psnr))
+                # average 20 psnr
+                logger.info('{}_average PSNR is {:<.2f}dB\n'.format(len(best_psnr), sum(best_psnr)/len(best_psnr)))
+
+            # -------------------------------
+            # 6) save model
+            # -------------------------------
+            if current_step % opt['train']['checkpoint_save'] == 0 and opt['rank'] == 0:
+                logger.info('Saving the model.')
+                model.save(current_step)
+                if best_psnr[0] == avg_psnr:
+                    model.save('best')
+                    logger.info('save best PSNR model : {:<.2f}dB\n'.format(best_psnr[0]))
+                else:
+                    logger.info('best PSNR : {:<.2f}dB\n'.format(best_psnr[0]))
 
 
 if __name__ == '__main__':
