@@ -15,36 +15,6 @@ def define_Dataset(dataset_opt):
         from data.dataset_l import DatasetL as D
 
     # -----------------------------------------
-    # denoising
-    # -----------------------------------------
-    elif dataset_type in ['dncnn', 'denoising']:
-        from data.dataset_dncnn import DatasetDnCNN as D
-
-    elif dataset_type in ['dnpatch']:
-        from data.dataset_dnpatch import DatasetDnPatch as D
-
-    elif dataset_type in ['ffdnet', 'denoising-noiselevel']:
-        from data.dataset_ffdnet import DatasetFFDNet as D
-
-    elif dataset_type in ['fdncnn', 'denoising-noiselevelmap']:
-        from data.dataset_fdncnn import DatasetFDnCNN as D
-
-    # -----------------------------------------
-    # super-resolution
-    # -----------------------------------------
-    elif dataset_type in ['sr', 'super-resolution']:
-        from data.dataset_sr import DatasetSR as D
-
-    elif dataset_type in ['srmd']:
-        from data.dataset_srmd import DatasetSRMD as D
-
-    elif dataset_type in ['dpsr', 'dnsr']:
-        from data.dataset_dpsr import DatasetDPSR as D
-
-    elif dataset_type in ['usrnet', 'usrgan']:
-        from data.dataset_usrnet import DatasetUSRNet as D
-
-    # -----------------------------------------
     # common
     # -----------------------------------------
     elif dataset_type in ['plain']:
