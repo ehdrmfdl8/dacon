@@ -24,7 +24,15 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 IMG_EXTENSIONS = ['.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.tif']
-
+def img_pad(x, patch_size=512):
+    H, W, _ = x.shape
+    Top, Bottom = max(0, int((patch_size-H)/2)), max(0, int((patch_size-H)/2))
+    Left, Right = max(0, int((patch_size-W)/2)), max(0, int((patch_size-W)/2))
+    if (patch_size-H) % 2 == 1:
+        Bottom += 1
+    if (patch_size-W) % 2 == 1:
+        Right += 1
+    return np.pad(x, pad_width=[(Top, Bottom), (Left, Right), (0, 0)])
 
 def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)

@@ -2,7 +2,7 @@ import random
 import numpy as np
 import torch.utils.data as data
 import utils.utils_image as util
-
+import albumentations as A
 
 class DatasetPlain(data.Dataset):
     '''
@@ -26,7 +26,18 @@ class DatasetPlain(data.Dataset):
         # ------------------------------------
         self.paths_H = util.get_image_paths(opt['dataroot_H'])
         self.paths_L = util.get_image_paths(opt['dataroot_L'])
-
+        self.L_transform = A.Compose(
+            [
+                A.Blur(p=0, blur_limit=(3, 30)),
+                A.ISONoise(p=0, intensity=(0.01, 0.1), color_shift=(0.01, 0.05))
+            ]
+        )
+        self.common_transform = A.ReplayCompose(
+            [
+                A.RandomScale(p=0.7, scale_limit= (-0.7, 0), interpolation=0),
+                A.RandomGridShuffle(p=1, grid=(3, 3)),
+                A.Cutout(p=0, num_holes=10, max_h_size=256, max_w_size=256)
+            ])
         assert self.paths_H, 'Error: H path is empty.'
         assert self.paths_L, 'Error: L path is empty. Plain dataset assumes both L and H are given!'
         if self.paths_L and self.paths_H:
@@ -51,22 +62,25 @@ class DatasetPlain(data.Dataset):
         # ------------------------------------
         if self.opt['phase'] == 'train':
 
-            H, W, _ = img_H.shape
-
+            # H, W, _ = img_H.shape
+            img_L = self.L_transform(image=img_L)['image']
+            transformed_L = self.common_transform(image=img_L)
+            H, W, _ = transformed_L['image'].shape
+            transformed_H = A.ReplayCompose.replay(transformed_L['replay'], image=img_H)
             # --------------------------------
             # randomly crop the patch
             # --------------------------------
             rnd_h = random.randint(0, max(0, H - self.patch_size))
             rnd_w = random.randint(0, max(0, W - self.patch_size))
-            patch_L = img_L[rnd_h:rnd_h + self.patch_size, rnd_w:rnd_w + self.patch_size, :]
-            patch_H = img_H[rnd_h:rnd_h + self.patch_size, rnd_w:rnd_w + self.patch_size, :]
+            patch_L = transformed_L['image'][rnd_h:rnd_h + self.patch_size, rnd_w:rnd_w + self.patch_size, :]
+            patch_H = transformed_H['image'][rnd_h:rnd_h + self.patch_size, rnd_w:rnd_w + self.patch_size, :]
 
             # --------------------------------
             # augmentation - flip and/or rotate
             # --------------------------------
             mode = random.randint(0, 7)
             patch_L, patch_H = util.augment_img(patch_L, mode=mode), util.augment_img(patch_H, mode=mode)
-
+            patch_L, patch_H = util.img_pad(patch_L, self.patch_size), util.img_pad(patch_H, self.patch_size)
             # --------------------------------
             # HWC to CHW, numpy(uint) to tensor
             # --------------------------------
