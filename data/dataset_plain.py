@@ -4,6 +4,7 @@ import torch.utils.data as data
 import utils.utils_image as util
 import albumentations as A
 
+
 class DatasetPlain(data.Dataset):
     '''
     # -----------------------------------------
@@ -28,15 +29,15 @@ class DatasetPlain(data.Dataset):
         self.paths_L = util.get_image_paths(opt['dataroot_L'])
         self.L_transform = A.Compose(
             [
-                A.Blur(p=0, blur_limit=(3, 30)),
-                A.ISONoise(p=0, intensity=(0.01, 0.1), color_shift=(0.01, 0.05))
+                A.Blur(p=opt['Blur'], blur_limit=(3, 30)),
+                A.ISONoise(p=opt['ISO_Noise'], intensity=(0.01, 0.1), color_shift=(0.01, 0.05))
             ]
         )
         self.common_transform = A.ReplayCompose(
             [
-                A.RandomScale(p=0.7, scale_limit= (-0.7, 0), interpolation=0),
-                A.RandomGridShuffle(p=1, grid=(3, 3)),
-                A.Cutout(p=0, num_holes=10, max_h_size=256, max_w_size=256)
+                A.RandomScale(p=opt['RandomScale'], scale_limit= (-0.7, 0), interpolation=0),
+                A.RandomGridShuffle(p=opt['RandomGridShuffle'], grid=(3, 3)),
+                A.Cutout(p=opt['Cutout'], num_holes=10, max_h_size=256, max_w_size=256)
             ])
         assert self.paths_H, 'Error: H path is empty.'
         assert self.paths_L, 'Error: L path is empty. Plain dataset assumes both L and H are given!'

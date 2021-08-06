@@ -1,5 +1,5 @@
 {
-  "task": "urrdbx2_test" //
+  "task": "urrdbx2_optimize_hp" //
   , "model": "plain" // "plain" | "gan"
   , "gpu_ids": [0]
   , "scale": 1
@@ -13,20 +13,26 @@
     "train": {
       "name": "train_dataset"
       , "dataset_type": "plain"
-      , "dataroot_H": "trainsets/train_label_img/case3/train"
-      , "dataroot_L": "trainsets/train_input_img/case3/train"
+      , "dataroot_H": "trainsets/train_label_img/case2/train"
+      , "dataroot_L": "trainsets/train_input_img/case2/train"
       , "H_size": 512 // 128 | 192
       , "use_flip": true
       , "use_rot": true
       , "dataloader_shuffle": true
       , "dataloader_num_workers": 8
-      , "dataloader_batch_size": 2
+      , "dataloader_batch_size": 8
+
+      , "Blur": 0.5
+      , "ISO_Noise": 0.5
+      , "RandomScale": 0.5
+      , "RandomGridShuffle": 0.5
+      , "Cutout": 0.5
     }
     , "test": {
       "name": "test_dataset"
       , "dataset_type": "plain"
-      , "dataroot_H": "trainsets/train_label_img/case3/val"
-      , "dataroot_L": "trainsets/train_input_img/case3/val"
+      , "dataroot_H": "trainsets/train_label_img/case2/val"
+      , "dataroot_L": "trainsets/train_input_img/case2/val"
     }
   }
 
@@ -52,7 +58,7 @@
   }
 
   , "train": {
-    "G_lossfn_type": "l1" // "l1" | "l2sum" | "l2" | "ssim"
+     "G_lossfn_type": "l1" // "l1" | "l2sum" | "l2" | "ssim"
     , "G_lossfn_weight": 1
 
     , "F_lossfn_type": "l1"  // "l1" | "l2"
@@ -63,15 +69,15 @@
     , "G_optimizer_wd": 0
     , "G_optimizer_clipgrad": null
 
-    , "G_scheduler_type": "MultiStepLR"
+    , "G_scheduler_type": "MultiStepLR" // "MultiStepLR" | "CyclicLR"
     , "G_scheduler_milestones": [200000, 400000, 600000, 800000, 1000000]
     , "G_scheduler_gamma": 0.5
 
     , "G_regularizer_orthstep": null
     , "G_regularizer_clipstep": null
 
-    , "checkpoint_test": 1
-    , "checkpoint_save": 1
-    , "checkpoint_print": 1
+    , "checkpoint_test": 100
+    , "checkpoint_save": 100
+    , "checkpoint_print": 12
   }
 }

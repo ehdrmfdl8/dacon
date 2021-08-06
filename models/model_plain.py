@@ -128,17 +128,22 @@ class ModelPlain(ModelBase):
     # define scheduler, only "MultiStepLR"
     # ----------------------------------------
     def define_scheduler(self):
-        self.schedulers.append(lr_scheduler.MultiStepLR(self.G_optimizer,
-                                                        self.opt_train['G_scheduler_milestones'],
-                                                        self.opt_train['G_scheduler_gamma']
-                                                        ))
-        # self.schedulers.append(lr_scheduler.CyclicLR(self.G_optimizer,
-        #                       base_lr=1e-5,
-        #                       max_lr=2e-4,
-        #                       step_size_up=5,
-        #                       step_size_down=100,
-        #                       mode='exp_range',
-        #                       gamma=0.9995))
+        G_scheduler_type = self.opt_train['G_scheduler_type']
+        if G_scheduler_type == "MultiStepLR":
+            self.schedulers.append(lr_scheduler.MultiStepLR(self.G_optimizer,
+                                                            self.opt_train['G_scheduler_milestones'],
+                                                            self.opt_train['G_scheduler_gamma']
+                                                            ))
+        elif G_scheduler_type == "CyclicLR":
+            self.schedulers.append(lr_scheduler.CyclicLR(self.G_optimizer,
+                                  base_lr=1e-5,
+                                  max_lr=2e-4,
+                                  step_size_up=5,
+                                  step_size_down=100,
+                                  mode='exp_range',
+                                  gamma=0.9995))
+        else:
+            print('error : set G_scheduler_type')
     """
     # ----------------------------------------
     # Optimization during training with data
