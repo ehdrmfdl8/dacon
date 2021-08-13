@@ -30,21 +30,22 @@ def objective(trial):
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--dist', default=False)
     parser.add_argument('--amp', default=True)
+    parser.add_argument('--resume', default= False)
     opt = option.parse(parser.parse_args().opt, is_train=True)
     opt['dist'] = parser.parse_args().dist
     opt['amp'] = parser.parse_args().amp
 
-    opt['datasets']['train']["Blur"] = trial.suggest_float("Blur", 0, 1, step=0.1)
-    opt['datasets']['train']["ISO_Noise"] = trial.suggest_float("ISO_Noise", 0, 1, step=0.1)
-    opt['datasets']['train']["RandomScale"] = trial.suggest_float("RandomScale", 0, 1, step=0.1)
-    opt['datasets']['train']["RandomGridShuffle"] = trial.suggest_float("RandomGridShuffle", 0, 1, step=0.1)
-    opt['datasets']['train']["Cutout"] = trial.suggest_float("Cutout", 0, 1, step=0.1)
+    #opt['datasets']['train']["Blur"] = trial.suggest_float("Blur", 0, 1, step=0.1)
+    #opt['datasets']['train']["ISO_Noise"] = trial.suggest_float("ISO_Noise", 0, 1, step=0.1)
+    #opt['datasets']['train']["RandomScale"] = trial.suggest_float("RandomScale", 0, 1, step=0.1)
+    #opt['datasets']['train']["RandomGridShuffle"] = trial.suggest_float("RandomGridShuffle", 0, 1, step=0.1)
+    #opt['datasets']['train']["Cutout"] = trial.suggest_float("Cutout", 0, 1, step=0.1)
     opt['train']["G_lossfn_type"] = trial.suggest_categorical("G_lossfn_type", ["l1", "l2", "l2sum", "ssim"])
     opt['train']["G_lossfn_weight"] = trial.suggest_float("G_lossfn_weight", 0, 1, step=0.01)
     opt['train']["F_lossfn_type"] = trial.suggest_categorical("F_lossfn_type", ["l1", "l2"])
     opt['train']["F_lossfn_weight"] = trial.suggest_float("F_lossfn_weight", 0, 1, step=0.01)
-    opt['train']["G_optimizer_lr"] = trial.suggest_float("G_optimizer_lr", 1e-6, 4e-4, log=True)
-    opt['train']["G_scheduler_gamma"] = trial.suggest_float("G_scheduler_gamma", 0.5, 1, step=0.01)
+    opt['train']["G_optimizer_lr"] = trial.suggest_float("G_optimizer_lr", 1e-5, 1e-2, log=True)
+    #opt['train']["G_scheduler_gamma"] = trial.suggest_float("G_scheduler_gamma", 0.5, 1, step=0.01)
 
 
     '''
@@ -176,7 +177,7 @@ def objective(trial):
     '''
 
     best_psnr = [0.0]
-    for epoch in range(1000):  # keep running
+    for epoch in range(120):  # keep running
         for i, train_data in enumerate(train_loader):
 
             current_step += 1
@@ -264,7 +265,7 @@ def objective(trial):
             # -------------------------------
             if current_step % opt['train']['checkpoint_save'] == 0 and opt['rank'] == 0:
                 logger.info('Saving the model.')
-                model.save(current_step)
+                #model.save(current_step)
                 if best_psnr[0] == avg_psnr:
                     logger.info('save best PSNR model : {:<.2f}dB\n'.format(best_psnr[0]))
                 else:

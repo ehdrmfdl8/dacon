@@ -34,7 +34,7 @@ def make_layer(block, n_layers):
 
 
 class URRDBNetx2(nn.Module):
-    def __init__(self, in_nc=3, out_nc=3, nc=32, nb=23, gc=32, scale=4, act_mode='L', downsample_mode='strideconv', upsample_mode='convtranspose'):
+    def __init__(self, in_nc=3, out_nc=3, nc=32, nb=20, gc=32, scale=4, act_mode='L', downsample_mode='strideconv', upsample_mode='convtranspose'):
         super(URRDBNetx2, self).__init__()
         RRDB_block_f = functools.partial(B.RRDB, nc=2*nc, gc=gc)
         print([in_nc, out_nc, nc, nb, gc])
@@ -66,8 +66,7 @@ class URRDBNetx2(nn.Module):
             raise NotImplementedError('upsample mode [{:s}] is not found'.format(upsample_mode))
 
         # Encoder
-        self.up_conv = Conv(in_nc, in_nc*16, bias=True, mode='C')
-        self.pixel_shuffle = nn.PixelShuffle(4)
+        self.pixel_unshuffle = nn.PixelUnshuffle(4)
         self.m_down11 = Conv(in_nc, nc, bias=True, mode = 'C')
         self.m_down12 = Block(nc, nc, bias=True, mode='C' + act_mode + 'C')
         self.m_down13 = Block(nc, nc, bias=True, mode='C' + act_mode + 'C')
@@ -81,12 +80,12 @@ class URRDBNetx2(nn.Module):
         self.m_down33 = Block(4 * nc, 4 * nc, bias=True, mode='C' + act_mode + 'C')
 
         # Decoder
-        self.m_up21 = upsample_block(4*nc, 2*nc, bias=True, mode='2') # 128 -> 64
-        self.m_up22 = Block(2*nc, 2*nc, bias=True, mode='C'+act_mode+'C')
-        self.m_up23 = Block(2*nc, 2*nc, bias=True, mode='C'+act_mode+'C')
+        self.m_up21 = upsample_block(4 * nc, 2 * nc, bias=True, mode='2')  # 128 -> 64
+        self.m_up22 = Block(2 * nc, 2 * nc, bias=True, mode='C' + act_mode + 'C')
+        self.m_up23 = Block(2 * nc, 2 * nc, bias=True, mode='C' + act_mode + 'C')
 
-        self.m_up11 = upsample_block(2*nc, nc, bias=True, mode='2') # 64 -> 32
-        self.m_up12 = Block(nc, nc, bias=True, mode='C'+act_mode+'C')
+        self.m_up11 = upsample_block(2 * nc, nc, bias=True, mode='2')  # 64 -> 32
+        self.m_up12 = Block(nc, nc, bias=True, mode='C' + act_mode + 'C')
         self.m_up13 = Block(nc, nc, bias=True, mode='C' + act_mode + 'C')
 
 
@@ -117,7 +116,10 @@ class URRDBNetx2(nn.Module):
         self.lrelu = Conv(negative_slope=0.2, mode='L')
 
         self.H_conv0 = Conv(nc, nc, bias=True, mode='C')
-        self.conv_last = Conv(nc, out_nc, bias=True, mode='C')
+        self.m_uper1 = upsample_block(nc, nc, mode = '2' + act_mode)
+        self.H_conv1 =  Conv(nc, nc, bias=True, mode='C')
+        self.act = Conv(mode='R')
+        self.conv_last =  Conv(nc, out_nc, bias=True, mode='C')
 
     def forward(self, x):
         w, h = x.size()[-2:]
@@ -125,15 +127,16 @@ class URRDBNetx2(nn.Module):
         paddingRight = int(np.ceil(w/8)*8-w)
         x = nn.ReplicationPad2d((0, paddingBottom, 0, paddingRight))(x)
 
-        x1 = self.up_conv(x) # [1 48 64 64]
-        x = self.pixel_shuffle(x1) # [1 3 256 256]
-
+        # x = F.interpolate(x, scale_factor=0.5, mode='nearest')
         head = self.m_down11(x) # [1 32 256 256]
         E1 = self.m_down13(self.m_down12(head)) # [1 32 256 256]
         E2 = self.m_down23(self.m_down22(self.m_down21(E1))) # [1 64 128 128]
         E3 = self.m_down33(self.m_down32(self.m_down31(E2))) # [1 128 64 64]
 
-        k = self.conv_first(x1)# [1 64 64 64]
+        # k = F.interpolate(x, scale_factor=0.25, mode='nearest') # [1 3 64 64]
+        # k = self.conv_first(k) # [1 64 64 64]
+        k = self.pixel_unshuffle(x) # [1 48 64 64]
+        k = self.conv_first(k)# [1 64 64 64]
         trunk = self.trunk_conv(self.RRDB_trunk(k)) # [1 64 64 64]
         k1 = k + trunk # [1 64 64 64]
         k2 = self.lrelu(self.upconv1(F.interpolate(k1, scale_factor=2, mode='nearest'))) # [1 64 128 128]
@@ -142,13 +145,13 @@ class URRDBNetx2(nn.Module):
         D = self.kernel_block1(k1) + E3 # [1 128 64 64]
         D = self.m_up23(self.m_up22(self.m_up21(D)+ self.kernel_block2(k2) + E2)) # [1 64 128 128]
         D = self.m_up13(self.m_up12(self.m_up11(D)+ self.kernel_block3(k3) + E1)) # [1 32 256 256]
-        out = self.conv_last(self.H_conv0(D) + head)
+        out = self.conv_last(self.act(self.H_conv1(self.m_uper1(self.H_conv0(D) + head))))
 
         out = out[..., :self.scale * w, :self.scale * h]
         return out
 
 if __name__ == '__main__':
-    x = torch.rand(1,3,64,64)
+    x = torch.rand(1,3,256,256)
     net = URRDBNetx2()
     net.eval()
     with torch.no_grad():

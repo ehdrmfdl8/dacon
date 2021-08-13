@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 import re
 import glob
-
+import yaml
 
 '''
 # --------------------------------------------
@@ -14,28 +14,53 @@ import glob
 # https://github.com/xinntao/BasicSR
 # --------------------------------------------
 '''
+def ordered_yaml():
+    """Support OrderedDict for yaml.
+    Returns:
+        yaml Loader and Dumper.
+    """
+    try:
+        from yaml import CDumper as Dumper
+        from yaml import CLoader as Loader
+    except ImportError:
+        from yaml import Dumper, Loader
 
+    _mapping_tag = yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG
+
+    def dict_representer(dumper, data):
+        return dumper.represent_dict(data.items())
+
+    def dict_constructor(loader, node):
+        return OrderedDict(loader.construct_pairs(node))
+
+    Dumper.add_representer(OrderedDict, dict_representer)
+    Loader.add_constructor(_mapping_tag, dict_constructor)
+    return Loader, Dumper
 
 def get_timestamp():
     return datetime.now().strftime('_%y%m%d_%H%M%S')
 
 
 def parse(opt_path, is_train=True):
-
     # ----------------------------------------
     # remove comments starting with '//'
     # ----------------------------------------
-    json_str = ''
-    with open(opt_path, 'r') as f:
-        for line in f:
-            line = line.split('//')[0] + '\n'
-            json_str += line
+    if opt_path.endswith('.json'):
+        json_str = ''
+        with open(opt_path, 'r') as f:
+            for line in f:
+                line = line.split('//')[0] + '\n'
+                json_str += line
+        opt = json.loads(json_str, object_pairs_hook=OrderedDict)
+    elif opt_path.endswith('yaml'):
+        with open(opt_path, mode='r') as f:
+            Loader, _ = ordered_yaml()
+            opt = yaml.load(f, Loader=Loader)
+
 
     # ----------------------------------------
     # initialize opt
     # ----------------------------------------
-    opt = json.loads(json_str, object_pairs_hook=OrderedDict)
-
     opt['opt_path'] = opt_path
     opt['is_train'] = is_train
 

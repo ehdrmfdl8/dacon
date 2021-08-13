@@ -13,8 +13,8 @@
     "train": {
       "name": "train_dataset"
       , "dataset_type": "plain"
-      , "dataroot_H": "trainsets/train_label_img/case2/train"
-      , "dataroot_L": "trainsets/train_input_img/case2/train"
+      , "dataroot_H": "trainsets/train_label_img/case3/train"
+      , "dataroot_L": "trainsets/train_input_img/case3/train"
       , "H_size": 512 // 128 | 192
       , "use_flip": true
       , "use_rot": true
@@ -22,17 +22,17 @@
       , "dataloader_num_workers": 8
       , "dataloader_batch_size": 8
 
-      , "Blur": 0.5
-      , "ISO_Noise": 0.5
-      , "RandomScale": 0.5
-      , "RandomGridShuffle": 0.5
-      , "Cutout": 0.5
+      , "Blur": 0
+      , "ISO_Noise": 0
+      , "RandomScale": 0
+      , "RandomGridShuffle": 0
+      , "Cutout": 0
     }
     , "test": {
       "name": "test_dataset"
       , "dataset_type": "plain"
-      , "dataroot_H": "trainsets/train_label_img/case2/val"
-      , "dataroot_L": "trainsets/train_input_img/case2/val"
+      , "dataroot_H": "trainsets/train_label_img/case3/val"
+      , "dataroot_L": "trainsets/train_input_img/case3/val"
     }
   }
 
@@ -76,8 +76,8 @@
     , "G_regularizer_orthstep": null
     , "G_regularizer_clipstep": null
 
-    , "checkpoint_test": 100
-    , "checkpoint_save": 100
-    , "checkpoint_print": 12
+    , "checkpoint_test": 600
+    , "checkpoint_save": 600
+    , "checkpoint_print": 100
   }
 }

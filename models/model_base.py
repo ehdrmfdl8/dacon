@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from utils.utils_bnorm import merge_bn, tidy_sequential
 from torch.nn.parallel import DataParallel, DistributedDataParallel
-
+from utils.utils_model import ModelEMA
 
 class ModelBase():
     def __init__(self, opt, scaler):
@@ -14,6 +14,7 @@ class ModelBase():
         self.schedulers = []                   # schedulers
         self.scaler = scaler            # Mixed precision
         self.amp = opt['amp']
+
 
     """
     # ----------------------------------------
@@ -96,6 +97,15 @@ class ModelBase():
             network = network.module
         return network
 
+    def model_ema(self, decay=0.999):
+        netG = self.get_bare_model(self.netG)
+
+        netG_params = dict(netG.named_parameters())
+        netG_ema_params = dict(self.netG_ema.named_parameters())
+
+        for k in netG_ema_params.keys():
+            netG_ema_params[k].data.mul_(decay).add_(netG_params[k].data, alpha=1 - decay)
+
     def model_to_device(self, network):
         """Model to device. It also warps models with DistributedDataParallel
         or DataParallel.
@@ -144,22 +154,35 @@ class ModelBase():
     # ----------------------------------------
     # save the state_dict of the network
     # ----------------------------------------
-    def save_network(self, save_dir, network, network_label, iter_label):
-        save_filename = '{}_{}.pth'.format(iter_label, network_label)
+    def save_network(self, save_dir, network, network_label, iter_label, param_key='params'):
+        save_filename = '{}_{}.pth'.format(network_label, iter_label)
         save_path = os.path.join(save_dir, save_filename)
-        network = self.get_bare_model(network)
-        state_dict = network.state_dict()
-        for key, param in state_dict.items():
-            state_dict[key] = param.cpu()
-        torch.save(state_dict, save_path)
+        network = network if isinstance(network, list) else [network]
+        param_key = param_key if isinstance(param_key, list) else [param_key]
+        assert len(network) == len(param_key), 'The lengths of net and param_key should be the same.'
+
+        save_dict = {}
+        for net_, param_key_ in zip(network, param_key):
+            net_ = self.get_bare_model(net_)
+            state_dict = net_.state_dict()
+            for key, param in state_dict.items():
+                state_dict[key] = param.cpu()
+            save_dict[param_key_] = state_dict
+        torch.save(save_dict, save_path)
 
     # ----------------------------------------
     # load the state_dict of the network
     # ----------------------------------------
-    def load_network(self, load_path, network, strict=True):
+    def load_network(self, load_path, network, strict=True, param_key='params'):
         network = self.get_bare_model(network)
+        load_network = torch.load(load_path)
+        if param_key is not None:
+            if param_key not in load_network and 'params' in load_network:
+                param_key = 'params'
+                print('Loading: params_ema does not exist, use params.')
+            load_network = load_network[param_key]
         if strict:
-            network.load_state_dict(torch.load(load_path), strict=strict)
+            network.load_state_dict(load_network, strict=strict)
         else:
             state_dict_old = torch.load(load_path)
             state_dict = network.state_dict()
@@ -204,3 +227,4 @@ class ModelBase():
     def merge_bnorm_test(self):
         merge_bn(self.netG)
         tidy_sequential(self.netG)
+

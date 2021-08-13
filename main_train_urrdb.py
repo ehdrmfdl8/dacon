@@ -9,6 +9,7 @@ import logging
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 import torch
+import warnings
 
 from utils import utils_logger
 from utils import utils_image as util
@@ -19,8 +20,9 @@ from data.select_dataset import define_Dataset
 from models.select_model import define_Model
 from torch.utils.tensorboard import SummaryWriter
 
+warnings.filterwarnings(action='ignore')
 # options/train_urrdb_psnr.json
-def main(json_path='options/train_urrdb_psnr_X2.json'):
+def main(option_path='options/train_urrdb_psnr.yaml'):  # options/train_urrdb_psnr.yaml
     '''
     # ----------------------------------------
     # Step--1 (prepare opt)
@@ -28,19 +30,20 @@ def main(json_path='options/train_urrdb_psnr_X2.json'):
     '''
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--opt', type=str, default=json_path, help='Path to option JSON file.')
+    parser.add_argument('--opt', type=str, default=option_path, help='Path to option JSON file.')
     parser.add_argument('--launcher', default='pytorch', help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--dist', default=False)
     parser.add_argument('--amp', default=True)
+    parser.add_argument('--resume', default= False)
     opt = option.parse(parser.parse_args().opt, is_train=True)
     opt['dist'] = parser.parse_args().dist
     opt['amp'] = parser.parse_args().amp
-
+    opt['resume'] = parser.parse_args().resume
     tb_writer = SummaryWriter(opt['path']['task'])
     # FP32 -> FP16
-    scaler = torch.cuda.amp.GradScaler()
 
+    scaler = torch.cuda.amp.GradScaler()
     # ----------------------------------------
     # distributed settings
     # ----------------------------------------
@@ -55,10 +58,16 @@ def main(json_path='options/train_urrdb_psnr_X2.json'):
     # update opt
     # ----------------------------------------
     # -->-->-->-->-->-->-->-->-->-->-->-->-->-
-    init_iter_G, init_path_G = option.find_last_checkpoint(opt['path']['models'], net_type='G')
+    if opt['resume'] == True:
+        init_iter_G, init_path_G = option.find_last_checkpoint(opt['path']['models'], net_type='G')
+        init_iter_optimizerG, init_path_optimizerG = option.find_last_checkpoint(opt['path']['models'], net_type='optimizerG')
+    else:
+        init_iter_G = 0
+        init_path_G = None
+        init_iter_optimizerG = 0
+        init_path_optimizerG = None
+
     opt['path']['pretrained_netG'] = init_path_G
-    init_iter_optimizerG, init_path_optimizerG = option.find_last_checkpoint(opt['path']['models'],
-                                                                             net_type='optimizerG')
     opt['path']['pretrained_optimizerG'] = init_path_optimizerG
     current_step = max(init_iter_G, init_iter_optimizerG)
 
@@ -209,7 +218,7 @@ def main(json_path='options/train_urrdb_psnr_X2.json'):
 
                     img_dir = os.path.join(opt['path']['images'], img_name)
                     util.mkdir(img_dir)
-
+                    model.is_train = False
                     model.feed_data(test_data)
                     model.test()
 
@@ -232,12 +241,13 @@ def main(json_path='options/train_urrdb_psnr_X2.json'):
 
                     avg_psnr += current_psnr
 
+                model.is_train = True
                 avg_psnr = avg_psnr / idx
                 if avg_psnr >= best_psnr[-1]:
                     best_psnr.append(avg_psnr)
                     best_psnr.sort(reverse=True)
                     # print(best_psnr)
-                    if len(best_psnr) >= 21:
+                    if len(best_psnr) >= 11:
                         best_psnr.pop()
                 # write tensorboard
                 tags = ['train/G_loss', 'train/F_loss', 'PSNR', 'lr']

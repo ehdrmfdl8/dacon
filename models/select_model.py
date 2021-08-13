@@ -21,6 +21,9 @@ def define_Model(opt, scaler):
     elif model == 'gan':     # one input: L
         from models.model_gan import ModelGAN as M
 
+    elif model == 'degradation': # one input: H
+        from models.model_degradation import ModelDegradation as M
+
     else:
         raise NotImplementedError('Model [{:s}] is not defined.'.format(model))
 

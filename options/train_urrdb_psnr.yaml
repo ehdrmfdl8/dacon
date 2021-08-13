@@ -1,0 +1,117 @@
+
+  task : urrdbx2
+  model : degradation # plain | gan | degradation
+  gpu_ids : [0]
+  scale : 4
+  n_channels: 3 # 1 for grayscale image restoration, 3 for color image restoration
+
+  merge_bn: false
+  merge_bn_startpoint: 300000
+  USM: true
+  queue_size: 160
+
+  # the first degradation process
+  resize_prob: [ 0.2, 0.7, 0.1 ]  # up, down, keep
+  resize_range: [ 0.15, 1.5 ]
+  gaussian_noise_prob: 0.5
+  noise_range: [ 1, 30 ]
+  poisson_scale_range: [ 0.05, 3 ]
+  gray_noise_prob: 0.4
+  jpeg_range: [ 30, 95 ]
+
+  # the second degradation process
+  second_blur_prob: 0.8
+  resize_prob2: [ 0.3, 0.4, 0.3 ]  # up, down, keep
+  resize_range2: [ 0.3, 1.2 ]
+  gaussian_noise_prob2: 0.5
+  noise_range2: [ 1, 25 ]
+  poisson_scale_range2: [ 0.05, 2.5 ]
+  gray_noise_prob2: 0.4
+  jpeg_range2: [ 30, 95 ]
+
+  datasets:
+    train:
+      name: train_dataset
+      dataset_type: degradation # degradation |
+      dataroot_H: trainsets/H_image/DIV2K_train
+      dataroot_L: null
+      H_size: 256 # 128 | 192
+      use_flip: true
+      use_rot: true
+      dataloader_shuffle: true
+      dataloader_num_workers: 8
+      dataloader_batch_size: 4
+
+      blur_kernel_size: 21
+      kernel_list: [ 'iso', 'aniso', 'generalized_iso', 'generalized_aniso', 'plateau_iso', 'plateau_aniso' ]
+      kernel_prob: [ 0.45, 0.25, 0.12, 0.03, 0.12, 0.03 ]
+      sinc_prob: 0.1
+      blur_sigma: [ 0.2, 3 ]
+      betag_range: [ 0.5, 4 ]
+      betap_range: [ 1, 2 ]
+
+      blur_kernel_size2: 21
+      kernel_list2: [ 'iso', 'aniso', 'generalized_iso', 'generalized_aniso', 'plateau_iso', 'plateau_aniso' ]
+      kernel_prob2: [ 0.45, 0.25, 0.12, 0.03, 0.12, 0.03 ]
+      sinc_prob2: 0.1
+      blur_sigma2: [ 0.2, 1.5 ]
+      betag_range2: [ 0.5, 4 ]
+      betap_range2: [ 1, 2 ]
+
+      final_sinc_prob: 0.8
+
+    test:
+      name: test_dataset
+      dataset_type: paired
+      dataroot_H: trainsets/val_image/H_image
+      dataroot_L: trainsets/val_image/L_image/X4
+
+
+
+  path:
+    root: urrdb_psnrx2
+    pretrained_netG: null
+
+
+  netG:
+    net_type: urrdbx2 # "urrdbx2" | "urrdb"
+    in_nc: 3
+    out_nc: 3
+    nc: 32 # [64, 128, 256, 512] for "unet"
+    nb: 23
+    gc: 32
+    act_mode: L # "BR" for BN+ReLU | "R" for ReLU
+    upsample_mode: convtranspose # "pixelshuffle" | "convtranspose" | "upconv"
+    downsample_mode: strideconv # "strideconv" | "avgpool" | "maxpool"
+
+    init_type: orthogonal # "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
+    init_bn_type: uniform # "uniform" | "constant"
+    init_gain: 0.2
+
+
+  train:
+    ema_decay: 0.999
+
+    G_lossfn_type: l1 # "l1" | "l2sum" | "l2" | "ssim"
+    G_lossfn_weight: 1
+
+    F_lossfn_type: l1  # "l1" | "l2"
+    F_lossfn_weight: 1
+
+    G_optimizer_type: adam
+    G_optimizer_lr: !!float 2e-4
+    G_optimizer_wd: 0
+    G_optimizer_clipgrad: null
+
+    G_scheduler_type: MultiStepLR # "MultiStepLR" | "CyclicLR"
+    G_scheduler_milestones: [200000, 400000, 600000, 800000, 1000000]
+    G_scheduler_gamma: 0.5
+
+    G_regularizer_orthstep: null
+    G_regularizer_clipstep: null
+
+    checkpoint_test: 10
+    checkpoint_save: 10
+    checkpoint_print: 1
+
+
