@@ -1,7 +1,7 @@
 
-  task : urrdbx2
+  task : rrdb
   model : degradation # plain | gan | degradation
-  gpu_ids : [0]
+  gpu_ids : [3]
   scale : 4
   n_channels: 3 # 1 for grayscale image restoration, 3 for color image restoration
 
@@ -40,7 +40,7 @@
       use_rot: true
       dataloader_shuffle: true
       dataloader_num_workers: 8
-      dataloader_batch_size: 4
+      dataloader_batch_size: 8
 
       blur_kernel_size: 21
       kernel_list: [ 'iso', 'aniso', 'generalized_iso', 'generalized_aniso', 'plateau_iso', 'plateau_aniso' ]
@@ -69,20 +69,20 @@
 
 
   path:
-    root: urrdb_psnrx2
+    root: rrdb_psnr
     pretrained_netG: null
 
 
   netG:
-    net_type: urrdbx2 # "urrdbx2" | "urrdb"
+    net_type: rrdb # "urrdbx2" | "urrdb"
     in_nc: 3
     out_nc: 3
-    nc: 32 # [64, 128, 256, 512] for "unet"
+    nc: 64 # [64, 128, 256, 512] for "unet"
     nb: 23
     gc: 32
     act_mode: L # "BR" for BN+ReLU | "R" for ReLU
-    upsample_mode: convtranspose # "pixelshuffle" | "convtranspose" | "upconv"
-    downsample_mode: strideconv # "strideconv" | "avgpool" | "maxpool"
+    upsample_mode: upconv # "pixelshuffle" | "convtranspose" | "upconv"
+
 
     init_type: orthogonal # "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
     init_bn_type: uniform # "uniform" | "constant"
@@ -96,7 +96,7 @@
     G_lossfn_weight: 1
 
     F_lossfn_type: l1  # "l1" | "l2"
-    F_lossfn_weight: 1
+    F_lossfn_weight: 0
     F_layer_weights:
       '25': 0.1
       '28': 0.1
@@ -110,14 +110,14 @@
     G_optimizer_clipgrad: null
 
     G_scheduler_type: MultiStepLR # "MultiStepLR" | "CyclicLR"
-    G_scheduler_milestones: [200000, 400000, 600000, 800000, 1000000]
+    G_scheduler_milestones: [1000000]
     G_scheduler_gamma: 0.5
 
     G_regularizer_orthstep: null
     G_regularizer_clipstep: null
 
-    checkpoint_test: 10
-    checkpoint_save: 10
-    checkpoint_print: 1
+    checkpoint_test: 10000
+    checkpoint_save: 10000
+    checkpoint_print: 1000
 
 

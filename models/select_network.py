@@ -20,11 +20,24 @@ def define_G(opt):
     # ----------------------------------------
     # super-resolution task
     # ----------------------------------------
-
+    # ----------------------------------------
+    # RRDB
+    # ----------------------------------------
+    if net_type == 'rrdb':  # URRDBNet
+        from models.network_rrdb import RRDB as net
+        netG = net(
+                   in_nc=opt_net['in_nc'],
+                   out_nc=opt_net['out_nc'],
+                   nc=opt_net['nc'],
+                   nb=opt_net['nb'],
+                   gc=opt_net['gc'],
+                   act_mode=opt_net['act_mode'],
+                   upsample_mode=opt_net['upsample_mode']
+                   )
     # ----------------------------------------
     # URRDB
     # ----------------------------------------
-    if net_type == 'urrdb':  # URRDBNet
+    elif net_type == 'urrdb':  # URRDBNet
         from models.network_u_rrdb import URRDBNet as net
         netG = net(
                    in_nc=opt_net['in_nc'],

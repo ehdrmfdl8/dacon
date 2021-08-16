@@ -44,6 +44,7 @@ class ModelDegradation(ModelBase):
             self.netG_ema.eval()
 
 
+
     """
     # ----------------------------------------
     # Preparation before training with data
@@ -128,11 +129,12 @@ class ModelDegradation(ModelBase):
             F_lossfn_type = self.opt_train['F_lossfn_type']
             F_use_input_norm = self.opt_train['F_use_input_norm']
             F_feature_layer = self.opt_train['F_feature_layer']
+            F_layer_weights = self.opt_train['F_layer_weights']
             if self.opt['dist']:
                 self.F_lossfn = PerceptualLoss(feature_layer=F_feature_layer, use_input_norm=F_use_input_norm,
                                                lossfn_type=F_lossfn_type).to(self.device)
             else:
-                self.F_lossfn = PerceptualLoss(feature_layer=F_feature_layer, use_input_norm=F_use_input_norm,
+                self.F_lossfn = PerceptualLoss(layer_weights= F_layer_weights, feature_layer=F_feature_layer, use_input_norm=F_use_input_norm,
                                                lossfn_type=F_lossfn_type)
                 self.F_lossfn.vgg = self.model_to_device(self.F_lossfn.vgg)
                 self.F_lossfn.lossfn = self.F_lossfn.lossfn.to(self.device)

@@ -8,9 +8,10 @@ from torch.nn import functional as F
 # Perceptual loss
 # --------------------------------------------
 class VGGFeatureExtractor(nn.Module):
-    def __init__(self, feature_layer=34, use_input_norm=True):
+    def __init__(self, layer_name_list, feature_layer=34, use_input_norm=True):
         super(VGGFeatureExtractor, self).__init__()
         model = torchvision.models.vgg19(pretrained=True)
+        self.layer_name_list = layer_name_list
         self.use_input_norm = use_input_norm
         if self.use_input_norm:
             mean = torch.Tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
@@ -28,7 +29,11 @@ class VGGFeatureExtractor(nn.Module):
     def forward(self, x):
         if self.use_input_norm:
             x = (x - self.mean) / self.std
-        output = self.features(x)
+        output = {}
+        for key, layer in self.features._modules.items():
+            x = layer(x)
+            if key in self.layer_name_list:
+                output[key] = x.clone()
         return output
 
 
@@ -36,9 +41,10 @@ class PerceptualLoss(nn.Module):
     """Perceptual loss
     """
 
-    def __init__(self, feature_layer=34, use_input_norm=True, lossfn_type='l1'):
+    def __init__(self, layer_weights, feature_layer=34, use_input_norm=True, lossfn_type='l1'):
         super(PerceptualLoss, self).__init__()
-        self.vgg = VGGFeatureExtractor(feature_layer=feature_layer, use_input_norm=use_input_norm)
+        self.layer_weights = layer_weights
+        self.vgg = VGGFeatureExtractor(layer_name_list=list(layer_weights.keys()) ,feature_layer=feature_layer, use_input_norm=use_input_norm)
         self.lossfn_type = lossfn_type
         if self.lossfn_type == 'l1':
             self.lossfn = nn.L1Loss()
@@ -53,8 +59,11 @@ class PerceptualLoss(nn.Module):
         Returns:
             Tensor: Forward results.
         """
-        x_vgg, gt_vgg = self.vgg(x), self.vgg(gt).detach()
-        loss = self.lossfn(x_vgg, gt_vgg)
+        x_vgg = self.vgg(x)
+        gt_vgg = self.vgg(gt.detach())
+        loss = 0
+        for k in x_vgg.keys():
+            loss += self.lossfn(x_vgg[k], gt_vgg[k]) * self.layer_weights[k]
         return loss
 
 # --------------------------------------------
