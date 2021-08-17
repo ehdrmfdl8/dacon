@@ -4,7 +4,7 @@ from torch.nn.utils import spectral_norm
 import models.basicblock as B
 import functools
 import numpy as np
-
+import torch.nn.functional as F
 
 """
 # --------------------------------------------
@@ -12,6 +12,7 @@ import numpy as np
 # Discriminator_VGG_128
 # Discriminator_VGG_192
 # Discriminator_VGG_128_SN
+# UNetDiscriminatorSN
 # --------------------------------------------
 """
 
@@ -21,7 +22,7 @@ import numpy as np
 # If n_layers = 3, then the receptive field is 70x70
 # --------------------------------------------
 class Discriminator_PatchGAN(nn.Module):
-    def __init__(self, input_nc=3, ndf=64, n_layers=3, norm_type='batch'):
+    def __init__(self, input_nc=3, ndf=64, n_layers=3, norm_type='batchspectral'):
         super(Discriminator_PatchGAN, self).__init__()
         self.n_layers = n_layers
 
@@ -265,6 +266,60 @@ class Discriminator_VGG_128_SN(nn.Module):
         return x
 
 
+class UNetDiscriminatorSN(nn.Module):
+    """Defines a U-Net discriminator with spectral normalization (SN)"""
+
+    def __init__(self, in_nc=3, base_nc=64, skip_connection =True):
+        super(UNetDiscriminatorSN, self).__init__()
+        self.skip_connection = skip_connection
+        norm = spectral_norm
+        self.lrelu = nn.LeakyReLU(0.2, True)
+        self.conv0 = nn.Conv2d(in_nc, base_nc, kernel_size=3, stride=1, padding=1)
+
+        self.conv1 = norm(nn.Conv2d(base_nc, base_nc * 2, 4, 2, 1, bias=False))
+        self.conv2 = norm(nn.Conv2d(base_nc * 2, base_nc * 4, 4, 2, 1, bias=False))
+        self.conv3 = norm(nn.Conv2d(base_nc * 4, base_nc * 8, 4, 2, 1, bias=False))
+        # upsample
+        self.conv4 = norm(nn.Conv2d(base_nc * 8, base_nc * 4, 3, 1, 1, bias=False))
+        self.conv5 = norm(nn.Conv2d(base_nc * 4, base_nc * 2, 3, 1, 1, bias=False))
+        self.conv6 = norm(nn.Conv2d(base_nc * 2, base_nc, 3, 1, 1, bias=False))
+
+        # extra
+        self.conv7 = norm(nn.Conv2d(base_nc, base_nc, 3, 1, 1, bias=False))
+        self.conv8 = norm(nn.Conv2d(base_nc, base_nc, 3, 1, 1, bias=False))
+
+        self.conv9 = nn.Conv2d(base_nc, 1, 3, 1, 1)
+
+    def forward(self, x):
+        x0 = self.lrelu(self.conv0(x))
+        x1 = self.lrelu(self.conv1(x0))
+        x2 = self.lrelu(self.conv2(x1))
+        x3 = self.lrelu(self.conv3(x2))
+
+        # upsample
+        x3 = F.interpolate(x3, scale_factor=2, mode='bilinear', align_corners=False)
+        x4 = self.lrelu(self.conv4(x3))
+
+        if self.skip_connection:
+            x4 = x4 + x2
+        x4 = F.interpolate(x4, scale_factor=2, mode='bilinear', align_corners=False)
+        x5 = self.lrelu(self.conv5(x4))
+
+        if self.skip_connection:
+            x5 = x5 + x1
+        x5 = F.interpolate(x5, scale_factor=2, mode='bilinear', align_corners=False)
+        x6 = self.lrelu(self.conv6(x5))
+
+        if self.skip_connection:
+            x6 = x6 + x0
+
+        # extra
+        out = self.lrelu(self.conv7(x6))
+        out = self.lrelu(self.conv8(out))
+        out = self.conv9(out)
+
+        return out
+
 if __name__ == '__main__':
 
     x = torch.rand(1, 3, 96, 96)
@@ -294,5 +349,20 @@ if __name__ == '__main__':
     with torch.no_grad():
         y = net(x)
     print(y.size())
+
+    x = torch.rand(1, 3, 100, 100)
+    net = Discriminator_PatchGAN()
+    net.eval()
+    with torch.no_grad():
+        y = net(x)
+    print(y.size())
+
+    x = torch.rand(1, 3, 128, 128)
+    net = UNetDiscriminatorSN()
+    net.eval()
+    with torch.no_grad():
+        y = net(x)
+    print(y.size())
+
 
     # run models/network_discriminator.py

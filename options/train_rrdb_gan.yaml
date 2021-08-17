@@ -1,6 +1,6 @@
 
-  task : rrdb
-  model : degradation # plain | gan | degradation
+  task : rrdb_gan
+  model : degradation_gan # plain | gan | degradation | degradation_gan
   gpu_ids : [0]
   scale : 4
   n_channels: 3 # 1 for grayscale image restoration, 3 for color image restoration
@@ -71,6 +71,7 @@
   path:
     root: rrdb_psnr
     pretrained_netG: null
+    pretrained_netD: null
 
 
   netG:
@@ -88,6 +89,14 @@
     init_bn_type: uniform # "uniform" | "constant"
     init_gain: 0.2
 
+  netD:
+    net_type: UNetDiscriminatorSN # "discriminator_vgg_192" | "discriminator_vgg_128" | "discriminator_vgg_96" | patchgan_spectral | "UNetDiscriminatorSN"
+    in_nc: 3
+    base_nc: 64
+
+    init_type: orthogonal # "orthogonal" | "normal" | "uniform" | "xavier_normal" | "xavier_uniform" | "kaiming_normal" | "kaiming_uniform"
+    init_bn_type: uniform # "uniform" | "constant"
+    init_gain: 0.2
 
   train:
     ema_decay: 0.999
@@ -96,7 +105,7 @@
     G_lossfn_weight: 1
 
     F_lossfn_type: l1  # "l1" | "l2"
-    F_lossfn_weight: 0
+    F_lossfn_weight: 1
     F_layer_weights:
       '25': 0.1
       '28': 0.1
@@ -104,17 +113,26 @@
       '32': 1
       '34': 1
 
+    gan_type: gan    # "gan" | "ragan"
+    D_lossfn_weight: 0.1
+    D_init_iters: 0
+
     G_optimizer_type: adam
-    G_optimizer_lr: !!float 2e-4
+    G_optimizer_lr: !!float 1e-4
     G_optimizer_wd: 0
-    G_optimizer_clipgrad: null
 
     G_scheduler_type: MultiStepLR # "MultiStepLR" | "CyclicLR"
     G_scheduler_milestones: [1000000]
     G_scheduler_gamma: 0.5
 
-    G_regularizer_orthstep: null
-    G_regularizer_clipstep: null
+    D_optimizer_type: adam
+    D_optimizer_lr: !!float 1e-4
+    D_optimizer_wd: 0
+
+    D_scheduler_type: MultiStepLR
+    D_scheduler_milestones: [200000, 400000, 600000, 800000, 1000000]
+    D_scheduler_gamma: 1
+    D_optimizer_reuse: true
 
     checkpoint_test: 10
     checkpoint_save: 10

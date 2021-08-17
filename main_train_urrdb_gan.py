@@ -22,7 +22,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 warnings.filterwarnings(action='ignore')
 # options/train_urrdb_psnr.json
-def main(option_path='options/train_rrdb_psnr.yaml'):  # options/train_urrdb_psnr.yaml
+def main(option_path='options/train_rrdb_gan.yaml'):  # options/train_urrdb_psnr.yaml
     '''
     # ----------------------------------------
     # Step--1 (prepare opt)

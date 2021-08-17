@@ -191,7 +191,13 @@ def define_D(opt):
         netD = discriminator(input_nc=opt_net['in_nc'], 
                              ndf=opt_net['base_nc'],
                              n_layers=opt_net['n_layers'],
-                             norm_type='spectral')   
+                             norm_type='spectral')
+
+    elif net_type == 'UNetDiscriminatorSN':
+        from models.network_discriminator import UNetDiscriminatorSN as discriminator
+        netD = discriminator(in_nc=opt_net['in_nc'],
+                             base_nc=opt_net['base_nc'],
+                             skip_connection=True)
 
     else:
         raise NotImplementedError('netD [{:s}] is not found.'.format(net_type))

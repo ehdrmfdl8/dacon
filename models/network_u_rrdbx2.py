@@ -136,8 +136,8 @@ class URRDBNetx2(nn.Module):
         k = self.conv_first(x1)# [1 64 64 64]
         trunk = self.trunk_conv(self.RRDB_trunk(k)) # [1 64 64 64]
         k1 = k + trunk # [1 64 64 64]
-        k2 = self.lrelu(self.upconv1(F.interpolate(k1, scale_factor=2, mode='nearest'))) # [1 64 128 128]
-        k3 = self.lrelu(self.upconv2(F.interpolate(k2, scale_factor=2, mode='nearest'))) # [1 64 256 256]
+        k2 = self.lrelu(self.upconv1(F.interpolate(k1, scale_factor=2, mode='bilinear'))) # [1 64 128 128]
+        k3 = self.lrelu(self.upconv2(F.interpolate(k2, scale_factor=2, mode='bilinear'))) # [1 64 256 256]
 
         D = self.kernel_block1(k1) + E3 # [1 128 64 64]
         D = self.m_up23(self.m_up22(self.m_up21(D)+ self.kernel_block2(k2) + E2)) # [1 64 128 128]

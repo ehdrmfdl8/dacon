@@ -72,7 +72,6 @@
 
     , "gan_type": "ragan"    // "gan" | "ragan"
     , "D_lossfn_weight": 0.1
-
     , "D_init_iters": 0
 
     , "G_optimizer_type": "adam"

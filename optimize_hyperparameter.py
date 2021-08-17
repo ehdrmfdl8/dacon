@@ -274,7 +274,7 @@ def objective(trial):
 
 if __name__ == '__main__':
 
-    study = optuna.create_study(sampler=optuna.samplers.TPESampler(), pruner=optuna.pruners.HyperbandPruner(), direction='maximize')
+    study = optuna.create_study(sampler=optuna.samplers.TPESampler(), direction='maximize')
     study.optimize(objective, n_trials=50)
     print("Best PSNR", study.best_value)
     print("Best trial", study.best_trial.params)
